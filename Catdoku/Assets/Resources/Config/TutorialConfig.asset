@@ -1,0 +1,140 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6478990abcdef12345601, type: 3}
+  m_Name: TutorialConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ColorCubeShooter.TutorialConfig
+  defaultUnderstandLabel: Let's Play
+  steps:
+  - stepType: 1
+    boardMessage: Double tap to place a cat on the cell.
+    understandLabel: 
+    showUnderstandButton: 0
+    showMask: 1
+    interactableCells: []
+    targetCell:
+      x: 2
+      y: 0
+    highlightCells: []
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 1
+  - stepType: 2
+    boardMessage: 'Well done!!!
+
+      Each <color=#8B3A2A>color</color> has only
+      one cat.'
+    understandLabel: Got it!
+    showUnderstandButton: 1
+    showMask: 0
+    interactableCells: []
+    targetCell:
+      x: 2
+      y: 0
+    highlightCells: []
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 0
+  - stepType: 3
+    boardMessage: 'Great job!
+
+      Cats cannot be in the <color=#8B3A2A>same row
+      or column</color>.
+
+      Tap empty cells to mark them with an X.'
+    understandLabel: 
+    showUnderstandButton: 0
+    showMask: 1
+    interactableCells: []
+    targetCell:
+      x: 2
+      y: 0
+    highlightCells: []
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 1
+  - stepType: 4
+    boardMessage: 'Only one <color=#DEC138>yellow cell</color> left.
+
+      <color=#8B3A2A>Double
+      tap to place the cat.</color>'
+    understandLabel: 
+    showUnderstandButton: 0
+    showMask: 1
+    interactableCells: []
+    targetCell:
+      x: 1
+      y: 3
+    highlightCells:
+    - x: 1
+      y: 3
+    - x: 2
+      y: 3
+    - x: 2
+      y: 2
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 1
+  - stepType: 5
+    boardMessage: 'Cats cannot touch each other''s <color=#8B3A2A>edges or corners</color>.
+
+      Swipe
+      through all these cells to exclude them.'
+    understandLabel: 
+    showUnderstandButton: 0
+    showMask: 1
+    interactableCells: []
+    targetCell:
+      x: 2
+      y: 0
+    highlightCells:
+    - x: 0
+      y: 2
+    - x: 0
+      y: 3
+    - x: 1
+      y: 2
+    handCell:
+      x: 0
+      y: 2
+    advanceMode: 1
+  - stepType: 6
+    boardMessage: Find the <color=#8B3A2A>last cat</color>!
+    understandLabel: 
+    showUnderstandButton: 0
+    showMask: 0
+    interactableCells: []
+    targetCell:
+      x: 3
+      y: 2
+    highlightCells: []
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 1
+  - stepType: 7
+    boardMessage: You understand the rules now.
+    understandLabel: Let's Play
+    showUnderstandButton: 1
+    showMask: 0
+    interactableCells: []
+    targetCell:
+      x: 2
+      y: 0
+    highlightCells: []
+    handCell:
+      x: 0
+      y: 0
+    advanceMode: 0

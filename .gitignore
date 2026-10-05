@@ -1,0 +1,40 @@
+# Unity generated (any level)
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+.utmp/
+
+# IDE / OS
+.idea/
+.vs/
+.vscode/
+.DS_Store
+__MACOSX/
+Thumbs.db
+
+# Build artifacts
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Misc
+sysinfo.txt
+crashlytics-build.properties
