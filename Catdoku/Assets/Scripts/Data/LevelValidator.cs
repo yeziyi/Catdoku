@@ -52,30 +52,98 @@ public static class LevelValidator
             }
         }
 
-        var queens = CollectQueens(level);
-        if (queens.Count != rows)
-            errors.Add($"Board {rows}x{rows} requires {rows} cats, found {queens.Count}.");
+        var cats = CollectSymbol(level, "Q");
+        var mice = CollectSymbol(level, "M");
 
-        ValidateOneCatPerColor(level, queens, errors);
-        ValidateUniqueRowsAndColumns(queens, errors);
-        ValidateNoAdjacentQueens(queens, rows, cols, errors);
+        if (mice.Count == 0)
+            ValidateClassicQueens(level, cats, errors);
+        else
+            ValidateSymmetricCatMouse(level, cats, mice, errors);
 
         return errors;
     }
 
-    static List<(int row, int col)> CollectQueens(LevelData level)
+    // Classic single-animal Queens (existing 1500 levels).
+    static void ValidateClassicQueens(LevelData level, List<(int row, int col)> queens, List<string> errors)
     {
-        var queens = new List<(int row, int col)>();
+        if (queens.Count != level.RowCount)
+            errors.Add($"Board {level.RowCount}x{level.RowCount} requires {level.RowCount} cats, found {queens.Count}.");
+
+        ValidateOneCatPerColor(level, queens, errors);
+        ValidateUniqueRowsAndColumns(queens, errors, "cat");
+        ValidateNoAdjacent(queens, level.RowCount, level.ColCount, errors, "cat");
+    }
+
+    // Symmetric cat + mouse: both one per region/row/col, same-species non-adjacent,
+    // and cat-mouse non-adjacent (8 directions).
+    static void ValidateSymmetricCatMouse(
+        LevelData level,
+        List<(int row, int col)> cats,
+        List<(int row, int col)> mice,
+        List<string> errors)
+    {
+        var rows = level.RowCount;
+        var cols = level.ColCount;
+
+        if (cats.Count != rows)
+            errors.Add($"Board {rows}x{rows} requires {rows} cats, found {cats.Count}.");
+        if (mice.Count != rows)
+            errors.Add($"Board {rows}x{rows} requires {rows} mice, found {mice.Count}.");
+
+        var colorsOnBoard = new HashSet<int>();
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < cols; c++)
+                colorsOnBoard.Add(level.GetColorAt(r, c));
+
+        if (colorsOnBoard.Count != rows)
+            errors.Add($"Board needs {rows} distinct colors, found {colorsOnBoard.Count}.");
+
+        var catsByColor = CountByColor(level, cats);
+        var miceByColor = CountByColor(level, mice);
+        foreach (var colorId in colorsOnBoard)
+        {
+            catsByColor.TryGetValue(colorId, out var nc);
+            miceByColor.TryGetValue(colorId, out var nm);
+            if (nc != 1)
+                errors.Add($"Color {colorId} has {nc} cats (must be exactly 1).");
+            if (nm != 1)
+                errors.Add($"Color {colorId} has {nm} mice (must be exactly 1).");
+        }
+
+        ValidateUniqueRowsAndColumns(cats, errors, "cat");
+        ValidateUniqueRowsAndColumns(mice, errors, "mouse");
+        ValidateNoAdjacent(cats, rows, cols, errors, "cat");
+        ValidateNoAdjacent(mice, rows, cols, errors, "mouse");
+        ValidateNoCrossAdjacency(cats, mice, rows, cols, errors);
+    }
+
+    static List<(int row, int col)> CollectSymbol(LevelData level, string symbol)
+    {
+        var result = new List<(int row, int col)>();
         for (var row = 0; row < level.RowCount; row++)
         {
             for (var col = 0; col < level.ColCount; col++)
             {
-                if (level.solution[row][col] == "Q")
-                    queens.Add((row, col));
+                if (level.solution[row][col] == symbol)
+                    result.Add((row, col));
             }
         }
 
-        return queens;
+        return result;
+    }
+
+    static Dictionary<int, int> CountByColor(LevelData level, List<(int row, int col)> cells)
+    {
+        var counts = new Dictionary<int, int>();
+        foreach (var (row, col) in cells)
+        {
+            var colorId = level.GetColorAt(row, col);
+            if (!counts.ContainsKey(colorId))
+                counts[colorId] = 0;
+            counts[colorId]++;
+        }
+
+        return counts;
     }
 
     static void ValidateOneCatPerColor(LevelData level, List<(int row, int col)> queens, List<string> errors)
@@ -110,40 +178,68 @@ public static class LevelValidator
             errors.Add($"Board needs {level.RowCount} distinct colors, found {colorsOnBoard.Count}.");
     }
 
-    static void ValidateUniqueRowsAndColumns(List<(int row, int col)> queens, List<string> errors)
+    static void ValidateUniqueRowsAndColumns(List<(int row, int col)> cells, List<string> errors, string label)
     {
         var usedRows = new HashSet<int>();
         var usedCols = new HashSet<int>();
 
-        foreach (var (row, col) in queens)
+        foreach (var (row, col) in cells)
         {
             if (!usedRows.Add(row))
-                errors.Add($"Row {row} has more than one cat.");
+                errors.Add($"Row {row} has more than one {label}.");
             if (!usedCols.Add(col))
-                errors.Add($"Column {col} has more than one cat.");
+                errors.Add($"Column {col} has more than one {label}.");
         }
     }
 
-    static void ValidateNoAdjacentQueens(
-        List<(int row, int col)> queens,
+    static void ValidateNoAdjacent(
+        List<(int row, int col)> cells,
         int rows,
         int cols,
-        List<string> errors)
+        List<string> errors,
+        string label)
     {
-        var queenSet = new HashSet<long>();
-        foreach (var (row, col) in queens)
-            queenSet.Add(CellKey(row, col));
+        var cellSet = new HashSet<long>();
+        foreach (var (row, col) in cells)
+            cellSet.Add(CellKey(row, col));
 
-        foreach (var (row, col) in queens)
+        foreach (var (row, col) in cells)
         {
             for (var i = 0; i < RowOffsets.Length; i++)
             {
                 var nr = row + RowOffsets[i];
                 var nc = col + ColOffsets[i];
                 if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-                if (queenSet.Contains(CellKey(nr, nc)))
+                if (cellSet.Contains(CellKey(nr, nc)))
                 {
-                    errors.Add($"Cats at ({row},{col}) and ({nr},{nc}) are adjacent.");
+                    errors.Add($"Two {label}s at ({row},{col}) and ({nr},{nc}) are adjacent.");
+                    return;
+                }
+            }
+        }
+    }
+
+    static void ValidateNoCrossAdjacency(
+        List<(int row, int col)> cats,
+        List<(int row, int col)> mice,
+        int rows,
+        int cols,
+        List<string> errors)
+    {
+        var mouseSet = new HashSet<long>();
+        foreach (var (row, col) in mice)
+            mouseSet.Add(CellKey(row, col));
+
+        foreach (var (row, col) in cats)
+        {
+            for (var i = 0; i < RowOffsets.Length; i++)
+            {
+                var nr = row + RowOffsets[i];
+                var nc = col + ColOffsets[i];
+                if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+                if (mouseSet.Contains(CellKey(nr, nc)))
+                {
+                    errors.Add($"Cat at ({row},{col}) is adjacent to mouse at ({nr},{nc}).");
                     return;
                 }
             }

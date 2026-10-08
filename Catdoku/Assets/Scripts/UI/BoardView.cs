@@ -65,8 +65,9 @@ public class BoardView : MonoBehaviour
 
                 var colorId = level.GetColorAt(row, col);
                 var isSolutionQueen = level.HasQueenAt(row, col);
+                var isSolutionMouse = level.HasMouseAt(row, col);
                 var catRevealed = level.IsCatRevealedAt(row, col);
-                cell.Initialize(row, col, LevelPalette.GetColor(colorId), isSolutionQueen, catRevealed);
+                cell.Initialize(row, col, LevelPalette.GetColor(colorId), isSolutionQueen, catRevealed, isSolutionMouse);
                 _cells[row, col] = cell;
             }
         }

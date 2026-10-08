@@ -28,6 +28,8 @@ public class GameManager : MonoBehaviour
     int _score;
     int _catsCollected;
     int _totalCats;
+    int _miceCollected;
+    int _totalMice;
     bool _isPlaying;
     Tween _pendingWinTween;
     readonly BoosterChargeStore _boosterCharges = new();
@@ -400,6 +402,8 @@ public class GameManager : MonoBehaviour
         _score = 0;
         _catsCollected = 0;
         _totalCats = _boardManager.CurrentLevel?.QueenCount ?? 0;
+        _miceCollected = 0;
+        _totalMice = _boardManager.CurrentLevel?.MouseCount ?? 0;
     }
 
     void ApplyPreplacedCats()
@@ -412,19 +416,22 @@ public class GameManager : MonoBehaviour
             for (var col = 0; col < level.ColCount; col++)
             {
                 if (!level.IsCatRevealedAt(row, col)) continue;
-                _catsCollected++;
+                if (level.HasMouseAt(row, col))
+                    _miceCollected++;
+                else
+                    _catsCollected++;
             }
         }
     }
 
-    void HandleCellPlacementResolved(CellView cell, bool isCorrectQueen)
+    void HandleCellPlacementResolved(CellView cell, bool isCorrectAnimal)
     {
         if (!_isPlaying) return;
 
         if (_tutorialManager != null && _tutorialManager.IsActive)
-            _tutorialManager.HandleCellAction(cell, isCorrectQueen);
+            _tutorialManager.HandleCellAction(cell, isCorrectAnimal);
 
-        if (!isCorrectQueen)
+        if (!isCorrectAnimal)
         {
             if (_tutorialManager != null && _tutorialManager.ShouldIgnoreWrongPlacementPenalty())
                 return;
@@ -437,19 +444,20 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (isCorrectQueen)
-        {
-            RegisterCatCollected();
-        }
+        RegisterAnimalCollected(cell);
     }
 
-    void RegisterCatCollected()
+    void RegisterAnimalCollected(CellView cell)
     {
-        _catsCollected++;
+        if (cell.IsSolutionMouse)
+            _miceCollected++;
+        else
+            _catsCollected++;
+
         _score += PointsPerCat;
         RefreshGamePanel();
 
-        if (_catsCollected >= _totalCats && _totalCats > 0)
+        if (_catsCollected >= _totalCats && _miceCollected >= _totalMice && (_totalCats + _totalMice) > 0)
             HandleWin();
     }
 
@@ -525,6 +533,8 @@ public class GameManager : MonoBehaviour
             _score,
             _catsCollected,
             _totalCats,
+            _miceCollected,
+            _totalMice,
             _lives,
             MaxLives);
     }

@@ -56,6 +56,33 @@ public class LevelData
         }
     }
 
+    public int MouseCount
+    {
+        get
+        {
+            if (solution == null) return 0;
+            var count = 0;
+            foreach (var row in solution)
+            {
+                if (row == null) continue;
+                foreach (var cell in row)
+                    if (cell == "M") count++;
+            }
+            return count;
+        }
+    }
+
+    public int AnimalCount => QueenCount + MouseCount;
+
+    public bool HasMouseAt(int row, int col)
+    {
+        if (solution == null || row < 0 || row >= solution.Length) return false;
+        var r = solution[row];
+        return r != null && col >= 0 && col < r.Length && r[col] == "M";
+    }
+
+    public bool HasAnimalAt(int row, int col) => HasQueenAt(row, col) || HasMouseAt(row, col);
+
     public int RevealedCatCount
     {
         get
@@ -81,7 +108,7 @@ public class LevelData
 
     public bool IsCatRevealedAt(int row, int col)
     {
-        if (!HasQueenAt(row, col)) return false;
+        if (!HasAnimalAt(row, col)) return false;
         if (catRevealed == null || row < 0 || row >= catRevealed.Length) return false;
         var r = catRevealed[row];
         return r != null && col >= 0 && col < r.Length && r[col];

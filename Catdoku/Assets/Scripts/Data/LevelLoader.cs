@@ -511,7 +511,7 @@ public static class LevelLoader
         {
             if (catRevealed[r] == null || solution[r] == null) continue;
             for (var c = 0; c < catRevealed[r].Length && c < solution[r].Length; c++)
-                if (solution[r][c] != "Q")
+                if (solution[r][c] != "Q" && solution[r][c] != "M")
                     catRevealed[r][c] = false;
         }
     }

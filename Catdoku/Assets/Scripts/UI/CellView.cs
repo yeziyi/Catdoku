@@ -62,12 +62,16 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     [SerializeField] Transform _heartParticlesRoot;
     [SerializeField] float _animDuration = 0.16f;
 
+    SpriteRenderer _iconMouse;
+    static Sprite _sharedMouseSprite;
+
     const float DoubleTapMaxDelay = 0.4f;
     const float DoubleTapMaxDistance = 50f;
 
     BoxCollider2D _collider;
     Vector3 _iconXBaseScale;
     Vector3 _iconCatBaseScale;
+    Vector3 _iconMouseBaseScale;
 
     float _lastTapTime = -1f;
     Vector2 _lastTapScreenPosition;
@@ -84,11 +88,17 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     int _row;
     int _col;
     bool _isSolutionQueen;
+    bool _isSolutionMouse;
 
     public int Row => _row;
     public int Col => _col;
     public bool IsSolutionQueen => _isSolutionQueen;
+    public bool IsSolutionMouse => _isSolutionMouse;
+    public bool IsSolutionAnimal => _isSolutionQueen || _isSolutionMouse;
     public bool IsLocked => _isLocked;
+
+    SpriteRenderer AnimalRenderer => _isSolutionMouse ? _iconMouse : _iconCat;
+    Vector3 AnimalBaseScale => _isSolutionMouse ? _iconMouseBaseScale : _iconCatBaseScale;
     public bool IsCatVisible => _catVisible;
     public bool NeedsEliminationMark => !IsCatVisible && _crossMode == CellCrossMode.None;
     public float AnimDuration => _animDuration;
@@ -113,6 +123,8 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         if (_iconX != null) _iconXBaseScale = _iconX.transform.localScale;
         if (_iconCat != null) _iconCatBaseScale = _iconCat.transform.localScale;
 
+        EnsureMouseIcon();
+
         if (_starParticlesRoot == null)
             _starParticlesRoot = transform.Find("StarExplosion");
         if (_heartParticlesRoot == null)
@@ -122,21 +134,54 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         StopParticleRoot(_heartParticlesRoot);
     }
 
+    void EnsureMouseIcon()
+    {
+        if (_iconMouse != null || _iconCat == null) return;
+
+        var go = Instantiate(_iconCat.gameObject, _iconCat.transform.parent);
+        go.name = "iconMouse";
+        go.transform.localPosition = _iconCat.transform.localPosition;
+        go.transform.localRotation = _iconCat.transform.localRotation;
+        go.transform.localScale = _iconCat.transform.localScale;
+
+        _iconMouse = go.GetComponent<SpriteRenderer>();
+        _iconMouse.sprite = GetMouseSprite();
+        _iconMouse.enabled = false;
+        _iconMouseBaseScale = _iconCatBaseScale;
+    }
+
+    static Sprite GetMouseSprite()
+    {
+        if (_sharedMouseSprite == null)
+        {
+            var tex = Resources.Load<Texture2D>("Images/GameView/IconMouse");
+            if (tex != null)
+                _sharedMouseSprite = Sprite.Create(
+                    tex,
+                    new Rect(0, 0, tex.width, tex.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+        }
+
+        return _sharedMouseSprite;
+    }
+
     void OnDestroy()
     {
         KillTweens();
     }
 
-    public void Initialize(int row, int col, Color backgroundColor, bool isSolutionQueen, bool catRevealedAtStart = false)
+    public void Initialize(int row, int col, Color backgroundColor, bool isSolutionQueen, bool catRevealedAtStart = false, bool isSolutionMouse = false)
     {
         _row = row;
         _col = col;
         _isSolutionQueen = isSolutionQueen;
+        _isSolutionMouse = isSolutionMouse;
         ResetVisuals();
         SetBackgroundColor(backgroundColor);
 
-        if (isSolutionQueen && catRevealedAtStart)
-            ShowPreplacedCat();
+        if ((isSolutionQueen || isSolutionMouse) && catRevealedAtStart)
+            ShowPreplacedAnimal();
     }
 
     public void SetBackgroundColor(Color color)
@@ -295,7 +340,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     void TryPlaceTutorialMark()
     {
         if (_isLocked || _tutorialLocked) return;
-        if (_isSolutionQueen && _catVisible) return;
+        if (IsSolutionAnimal && _catVisible) return;
         if (_crossMode != CellCrossMode.None) return;
 
         ShowCross(CellCrossMode.White);
@@ -305,7 +350,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
 
     SwipeMarkMode GetSwipeMarkMode()
     {
-        if (_isSolutionQueen && _catVisible) return SwipeMarkMode.None;
+        if (IsSolutionAnimal && _catVisible) return SwipeMarkMode.None;
         if (_crossMode == CellCrossMode.White) return SwipeMarkMode.RemoveWhiteCross;
         if (_crossMode == CellCrossMode.None) return SwipeMarkMode.AddWhiteCross;
         return SwipeMarkMode.None;
@@ -314,7 +359,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     void ApplyNormalSwipeMark(SwipeMarkMode mode)
     {
         if (_isLocked || _tutorialLocked) return;
-        if (_isSolutionQueen && _catVisible) return;
+        if (IsSolutionAnimal && _catVisible) return;
 
         if (mode == SwipeMarkMode.AddWhiteCross && _crossMode == CellCrossMode.None)
         {
@@ -347,13 +392,13 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     {
         if (_isLocked || _tutorialLocked) return;
 
-        if (_isSolutionQueen && !_catVisible)
+        if (IsSolutionAnimal && !_catVisible)
         {
             HideCrossImmediate();
             LockCell();
             SoundManager.Instance?.PlayDoubleClickCorrectSound();
             PlayStarParticles();
-            ShowCat(() => PlacementResolved?.Invoke(this, true));
+            ShowAnimal(() => PlacementResolved?.Invoke(this, true));
             return;
         }
 
@@ -362,17 +407,18 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
 
     public void RevealCatSilently()
     {
-        if (!_isSolutionQueen || _catVisible) return;
+        if (!IsSolutionAnimal || _catVisible) return;
 
         HideCrossImmediate();
         _catVisible = true;
-        if (_iconCat != null)
+        var renderer = AnimalRenderer;
+        if (renderer != null)
         {
-            _iconCat.DOKill();
-            _iconCat.transform.DOKill();
-            _iconCat.enabled = true;
-            _iconCat.color = Color.white;
-            _iconCat.transform.localScale = _iconCatBaseScale;
+            renderer.DOKill();
+            renderer.transform.DOKill();
+            renderer.enabled = true;
+            renderer.color = Color.white;
+            renderer.transform.localScale = AnimalBaseScale;
         }
 
         LockCell();
@@ -381,7 +427,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     void ApplySingleClick()
     {
         if (_isLocked) return;
-        if (_isSolutionQueen && _catVisible) return;
+        if (IsSolutionAnimal && _catVisible) return;
 
         if (_inputMode == CellInputMode.TutorialMarkOnly)
         {
@@ -417,14 +463,14 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     {
         if (_isLocked) return;
 
-        if (_isSolutionQueen)
+        if (IsSolutionAnimal)
         {
             if (_catVisible) return;
             HideCrossImmediate();
             LockCell();
             SoundManager.Instance?.PlayDoubleClickCorrectSound();
             PlayStarParticles();
-            ShowCat(() => PlacementResolved?.Invoke(this, true));
+            ShowAnimal(() => PlacementResolved?.Invoke(this, true));
             return;
         }
 
@@ -438,13 +484,13 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
 
     public void ApplyHintPlaceQueen()
     {
-        if (_isLocked || _catVisible || !_isSolutionQueen) return;
+        if (_isLocked || _catVisible || !IsSolutionAnimal) return;
 
         HideCrossImmediate();
         LockCell();
         SoundManager.Instance?.PlayDoubleClickCorrectSound();
         PlayStarParticles();
-        ShowCat(() => PlacementResolved?.Invoke(this, true));
+        ShowAnimal(() => PlacementResolved?.Invoke(this, true));
     }
 
     public void ApplyHintEliminate()
@@ -485,22 +531,23 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         _crossMode = CellCrossMode.None;
     }
 
-    void ShowCat(TweenCallback onComplete = null)
+    void ShowAnimal(TweenCallback onComplete = null)
     {
         _catVisible = true;
-        PlayShowTween(_iconCat, Color.white, _iconCatBaseScale, onComplete);
+        PlayShowTween(AnimalRenderer, Color.white, AnimalBaseScale, onComplete);
     }
 
-    void ShowPreplacedCat()
+    void ShowPreplacedAnimal()
     {
         _catVisible = true;
-        if (_iconCat != null)
+        var renderer = AnimalRenderer;
+        if (renderer != null)
         {
-            _iconCat.DOKill();
-            _iconCat.transform.DOKill();
-            _iconCat.enabled = true;
-            _iconCat.color = Color.white;
-            _iconCat.transform.localScale = _iconCatBaseScale;
+            renderer.DOKill();
+            renderer.transform.DOKill();
+            renderer.enabled = true;
+            renderer.color = Color.white;
+            renderer.transform.localScale = AnimalBaseScale;
         }
 
         LockCell();
@@ -599,6 +646,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         SetRendererVisible(_background, !_tutorialHidden);
         SetRendererVisible(_iconX, !_tutorialHidden && _crossMode != CellCrossMode.None);
         SetRendererVisible(_iconCat, !_tutorialHidden && _catVisible);
+        SetRendererVisible(_iconMouse, !_tutorialHidden && _catVisible);
     }
 
     static void SetRendererVisible(SpriteRenderer renderer, bool visible)
@@ -615,6 +663,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         ApplyBoostToRenderer(_background, 0);
         ApplyBoostToRenderer(_iconX, 1);
         ApplyBoostToRenderer(_iconCat, 2);
+        ApplyBoostToRenderer(_iconMouse, 2);
     }
 
     void ApplyBoostToRenderer(SpriteRenderer renderer, int baseOrder)
@@ -662,6 +711,14 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
             _iconCat.sortingOrder = 2;
         }
 
+        if (_iconMouse != null)
+        {
+            _iconMouse.enabled = false;
+            _iconMouse.color = Color.white;
+            _iconMouse.transform.localScale = _iconMouseBaseScale;
+            _iconMouse.sortingOrder = 2;
+        }
+
         ApplySortingOrderBoost();
 
         StopParticleRoot(_starParticlesRoot);
@@ -703,5 +760,7 @@ public class CellView : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
         _iconX?.transform.DOKill();
         _iconCat?.DOKill();
         _iconCat?.transform.DOKill();
+        _iconMouse?.DOKill();
+        _iconMouse?.transform.DOKill();
     }
 }
