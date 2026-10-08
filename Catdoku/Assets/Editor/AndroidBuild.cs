@@ -11,7 +11,7 @@ public static class AndroidBuild
         var options = new BuildPlayerOptions
         {
             scenes = scenes,
-            locationPathName = "Builds/Catdoku.apk",
+            locationPathName = "Builds/CatMouseDoku.apk",
             target = BuildTarget.Android,
             options = BuildOptions.None
         };
